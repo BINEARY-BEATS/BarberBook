@@ -1,0 +1,9 @@
+feat: 'Minimalist Luxury' Brand Identity & Dashboard Overhaul
+
+- Implemented a monochromatic true-black theme system with muted gold accents.
+- Integrated Inter & Lexend typography with lightweight, refined font weight scaling.
+- Overhauled the Barber Home Screen with a simplified, professional dashboard layout.
+- Redesigned the Queue Manager with minimal status indicators and charcoal tiles.
+- Transformed the onboarding flow into a high-end, step-by-step executive experience.
+- Modernized the splash screen with a sleek, monochromatic logo treatment and spacing.
+- Standardized component geometry to 16px radius for a mature, sophisticated aesthetic.

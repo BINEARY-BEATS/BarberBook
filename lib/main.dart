@@ -70,15 +70,15 @@ class FirebaseNotConfiguredApp extends StatelessWidget {
       title: 'BarberBook',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1A1A2E),
-          secondary: const Color(0xFFE94560),
+          seedColor: const Color(0xFF116979),
+          secondary: const Color(0xFF00ADB5),
         ),
         useMaterial3: true,
       ),
       home: Scaffold(
         appBar: AppBar(
           title: const Text('BarberBook'),
-          backgroundColor: const Color(0xFF1A1A2E),
+          backgroundColor: const Color(0xFF116979),
           foregroundColor: Colors.white,
         ),
         body: SafeArea(
