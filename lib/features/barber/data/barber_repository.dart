@@ -163,6 +163,20 @@ class BarberRepository {
     return results;
   }
 
+  /// Searches for barbers by shop name (prefix search).
+  Future<List<BarberModel>> searchBarbers(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) return const [];
+
+    final snap = await _firestore
+        .collection(FirestoreKeys.barbers)
+        .where(FirestoreKeys.barberShopName, isGreaterThanOrEqualTo: q)
+        .where(FirestoreKeys.barberShopName, isLessThanOrEqualTo: '$q\uf8ff')
+        .get();
+
+    return snap.docs.map((doc) => BarberModel.fromMap(doc.data(), uid: doc.id)).toList();
+  }
+
   /// Calculates the great-circle distance between two [GeoPoint] values.
   double _haversineDistanceKm(GeoPoint a, GeoPoint b) {
     const earthRadiusKm = 6371.0;

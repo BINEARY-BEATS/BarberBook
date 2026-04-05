@@ -1,298 +1,151 @@
-import 'dart:math';
-
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/widgets/book_empty_state.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../../barber/models/barber_model.dart';
 import '../../barber/providers/barber_provider.dart';
-import '../widgets/barber_card.dart';
 
-/// Customer home screen:
-/// - Shows the user's current location on a Google Map.
-/// - Fetches nearby barbers using a bounding-box + distance filter.
-/// - Displays markers and a searchable list of barbers.
 class CustomerHomeScreen extends ConsumerStatefulWidget {
-  /// Creates the customer home screen.
   const CustomerHomeScreen({super.key});
-
   @override
-  ConsumerState<CustomerHomeScreen> createState() =>
-      _CustomerHomeScreenState();
+  ConsumerState<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
 }
 
 class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   bool _isLoading = true;
   String? _errorText;
-  bool _suggestOpenSettings = false;
-
   LatLng? _currentLatLng;
-  List<BarberModel> _nearbyBarbers = const <BarberModel>[];
+  List<BarberModel> _barbers = [];
   String _searchQuery = '';
+  bool _isSearching = false;
+  Timer? _debounce; // To prevent terminal noise and firestore spam
+
+  static const String _darkMapStyle = '''
+[
+  { "elementType": "geometry", "stylers": [{ "color": "#212121" }] },
+  { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+  { "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#212121" }] },
+  { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "color": "#757575" }] },
+  { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#181818" }] },
+  { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#2c2c2c" }] },
+  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#000000" }] }
+]
+''';
 
   @override
-  void initState() {
-    super.initState();
-    _loadNearbyBarbers();
-  }
+  void initState() { super.initState(); _initData(); }
+  @override
+  void dispose() { _debounce?.cancel(); super.dispose(); }
 
-  /// Loads user location and fetches nearby barbers.
-  Future<void> _loadNearbyBarbers() async {
-    setState(() {
-      _isLoading = true;
-      _errorText = null;
-      _suggestOpenSettings = false;
-    });
-
+  Future<void> _initData() async {
+    setState(() => _isLoading = true);
     try {
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        final requested = await Geolocator.requestPermission();
-        if (requested == LocationPermission.denied) {
-          if (!mounted) return;
-          setState(() {
-            _isLoading = false;
-            _errorText =
-                'Location is off for BarberBook. Allow access when asked, or enable it in Settings.';
-            _suggestOpenSettings = true;
-          });
-          return;
-        }
-        if (requested == LocationPermission.deniedForever) {
-          if (!mounted) return;
-          setState(() {
-            _isLoading = false;
-            _errorText =
-                'Location is blocked for this app. Turn it on in system Settings → Apps → BarberBook → Permissions.';
-            _suggestOpenSettings = true;
-          });
-          return;
-        }
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      final current = LatLng(position.latitude, position.longitude);
-      final center = GeoPoint(position.latitude, position.longitude);
-
+      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final current = LatLng(pos.latitude, pos.longitude);
       final repo = ref.read(barberRepositoryProvider);
-      final barbers = await repo.getNearbyBarbers(center, 5.0);
-
-      if (!mounted) return;
-      setState(() {
-        _currentLatLng = current;
-        _nearbyBarbers = barbers;
-        _isLoading = false;
-      });
+      final list = await repo.getNearbyBarbers(GeoPoint(pos.latitude, pos.longitude), 50.0);
+      if (mounted) setState(() { _currentLatLng = current; _barbers = list; _isLoading = false; });
     } catch (e) {
-      if (!mounted) return;
-      final raw = e.toString();
-      final userMessage = raw.contains('manifest') &&
-              raw.contains('ACCESS_') &&
-              raw.contains('LOCATION')
-          ? 'This build was missing location permissions. They are now included — fully stop the app and open it again (or run a fresh install).'
-          : 'Something went wrong while loading nearby barbers.';
-      setState(() {
-        _isLoading = false;
-        _errorText = userMessage;
-        _suggestOpenSettings = raw.toLowerCase().contains('permission');
-      });
+      if (mounted) setState(() { _errorText = 'Location required for grooming discovery.'; _isLoading = false; });
     }
   }
 
-  /// Haversine distance in kilometers.
-  double _distanceKm(LatLng a, LatLng b) {
-    const earthRadiusKm = 6371.0;
-
-    final dLat = (b.latitude - a.latitude) * pi / 180;
-    final dLng = (b.longitude - a.longitude) * pi / 180;
-
-    final lat1 = a.latitude * pi / 180;
-    final lat2 = b.latitude * pi / 180;
-
-    final sinDLat = sin(dLat / 2);
-    final sinDLng = sin(dLng / 2);
-
-    final h = sinDLat * sinDLat + sinDLng * sinDLng * cos(lat1) * cos(lat2);
-    final c = 2 * atan2(sqrt(h), sqrt(1 - h));
-
-    return earthRadiusKm * c;
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () => _performSearch(query));
   }
 
-  AppBar _customerAppBar() {
-    return AppBar(
-      title: const Text('Nearby barbers'),
-      actions: [
-        IconButton(
-          tooltip: 'Refresh',
-          icon: const Icon(Icons.refresh_rounded),
-          onPressed: _isLoading ? null : () => _loadNearbyBarbers(),
-        ),
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert_rounded),
-          onSelected: (value) async {
-            if (value == 'bookings') {
-              if (!mounted) return;
-              context.push('/customer/my-bookings');
-            }
-            if (value == 'signout') {
-              await ref.read(authRepositoryProvider).signOut();
-              if (!mounted) return;
-              context.go('/splash');
-            }
-          },
-          itemBuilder: (context) => const [
-            PopupMenuItem(
-              value: 'bookings',
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.bookmark_outline_rounded),
-                title: Text('My bookings'),
-              ),
-            ),
-            PopupMenuItem(
-              value: 'signout',
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.logout_rounded),
-                title: Text('Sign out'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
+  Future<void> _performSearch(String query) async {
+    if (!mounted) return;
+    setState(() { _searchQuery = query; _isSearching = true; });
+    if (query.isEmpty) { await _initData(); return; }
+    try {
+      final repo = ref.read(barberRepositoryProvider);
+      final results = await repo.searchBarbers(query);
+      if (mounted) setState(() { _barbers = results; _isSearching = false; });
+    } catch (_) { if (mounted) setState(() => _isSearching = false); }
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
-      return const Scaffold(body: Center(child: Text('Please sign in.')));
-    }
+    final theme = Theme.of(context);
+    if (_isLoading) return const Scaffold(backgroundColor: Colors.black, body: Center(child: CircularProgressIndicator(color: Colors.white10)));
+    if (_errorText != null) return Scaffold(backgroundColor: Colors.black, body: BookEmptyState(icon: Icons.location_off_rounded, title: 'ACCESS DENIED', subtitle: _errorText, action: FilledButton(onPressed: _initData, child: const Text('RETRY'))));
 
-    if (_isLoading) {
-      return Scaffold(
-        appBar: _customerAppBar(),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_errorText != null) {
-      return Scaffold(
-        appBar: _customerAppBar(),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: BookEmptyState(
-              icon: Icons.location_searching_rounded,
-              title: 'Can’t show nearby barbers',
-              subtitle: _errorText,
-              action: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FilledButton.icon(
-                    onPressed: () => _loadNearbyBarbers(),
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Try again'),
-                  ),
-                  if (_suggestOpenSettings) ...[
-                    const SizedBox(height: 12),
-                    TextButton.icon(
-                      onPressed: () async {
-                        await Geolocator.openAppSettings();
-                      },
-                      icon: const Icon(Icons.settings_rounded),
-                      label: const Text('Open app settings'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    final current = _currentLatLng!;
-    final filteredBarbers = _nearbyBarbers.where((b) {
-      final q = _searchQuery.trim().toLowerCase();
-      if (q.isEmpty) return true;
-      return b.shopName.toLowerCase().contains(q) ||
-          b.ownerName.toLowerCase().contains(q);
-    }).toList();
-
-    final markers = <Marker>{
-      Marker(
-        markerId: const MarkerId('me'),
-        position: current,
-      ),
-      ...filteredBarbers.map(
-        (b) {
-          final pos = LatLng(b.location.latitude, b.location.longitude);
-          return Marker(
-            markerId: MarkerId(b.uid),
-            position: pos,
-            onTap: () {
-              context.push('/customer/barber/${b.uid}');
-            },
-          );
-        },
-      ),
-    };
+    final markers = _barbers.map((b) => Marker(
+      markerId: MarkerId(b.uid),
+      position: LatLng(b.location.latitude, b.location.longitude),
+      onTap: () => context.push('/customer/barber/${b.uid}'),
+    )).toSet();
 
     return Scaffold(
-      appBar: _customerAppBar(),
-      body: Column(
+      backgroundColor: Colors.black,
+      body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              decoration: InputDecoration(
-                labelText: 'Search barbers',
-                hintText: 'Shop name or owner',
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(),
-              ),
-              onChanged: (v) => setState(() => _searchQuery = v),
-            ),
-          ),
-          Flexible(
-            flex: 1,
+          Positioned.fill(
             child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: current,
-                zoom: 14,
-              ),
-              myLocationEnabled: false,
+              initialCameraPosition: CameraPosition(target: _currentLatLng!, zoom: 12),
               markers: markers,
-              onMapCreated: (_) {},
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              onMapCreated: (c) => c.setMapStyle(_darkMapStyle),
             ),
           ),
-          Flexible(
-            flex: 1,
-            child: ListView.builder(
-              itemCount: filteredBarbers.length,
-              itemBuilder: (context, index) {
-                final barber = filteredBarbers[index];
-                final dist = _distanceKm(
-                  current,
-                  LatLng(barber.location.latitude, barber.location.longitude),
-                );
-                return BarberCard(
-                  barber: barber,
-                  distanceKm: dist,
-                );
-              },
+          
+          Positioned(
+            top: 60, left: 24, right: 24,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withOpacity(0.05))),
+              child: TextField(
+                onChanged: _onSearchChanged,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  icon: _isSearching ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white24)) : const Icon(Icons.search, color: Colors.white24, size: 20),
+                  hintText: 'SEARCH MASTERS',
+                  hintStyle: GoogleFonts.lexend(color: Colors.white12, fontSize: 13, letterSpacing: 1),
+                  border: InputBorder.none,
+                ),
+              ),
+            ),
+          ),
+
+          DraggableScrollableSheet(
+            initialChildSize: 0.3, minChildSize: 0.15, maxChildSize: 0.8,
+            builder: (context, scrollController) {
+              return Container(
+                decoration: const BoxDecoration(color: Color(0xFF0A0A0A), borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+                child: ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(24),
+                  itemCount: _barbers.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == 0) return Padding(padding: const EdgeInsets.only(bottom: 24), child: Text(_searchQuery.isEmpty ? 'NEARBY MASTERS' : 'MATCHING BARBERS', style: theme.textTheme.labelLarge));
+                    final b = _barbers[index - 1];
+                    return _BarberLuxuryTile(barber: b);
+                  },
+                ),
+              );
+            },
+          ),
+
+          Positioned(
+            bottom: 40, left: 24, right: 24,
+            child: SizedBox(
+              height: 54,
+              child: FilledButton(
+                onPressed: () => context.push('/customer/my-bookings'),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111111), foregroundColor: Colors.white, side: BorderSide(color: Colors.white.withOpacity(0.05))),
+                child: const Text('VIEW MY BOOKINGS'),
+              ),
             ),
           ),
         ],
@@ -301,3 +154,25 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   }
 }
 
+class _BarberLuxuryTile extends StatelessWidget {
+  const _BarberLuxuryTile({required this.barber});
+  final BarberModel barber;
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: () => context.push('/customer/barber/${barber.uid}'),
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withOpacity(0.04))),
+      child: Row(children: [
+        CircleAvatar(backgroundColor: Colors.white10, radius: 24, child: Text(barber.shopName[0].toUpperCase(), style: const TextStyle(color: Colors.white))),
+        const SizedBox(width: 20),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(barber.shopName.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 1)),
+          Text(barber.ownerName, style: const TextStyle(color: Colors.white24, fontSize: 11)),
+        ])),
+        const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white10, size: 14),
+      ]),
+    ),
+  );
+}

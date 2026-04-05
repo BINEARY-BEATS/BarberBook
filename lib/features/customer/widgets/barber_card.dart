@@ -1,103 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../barber/models/barber_model.dart';
 
-/// Card widget used on the customer home screen for displaying a barber.
 class BarberCard extends StatelessWidget {
-  /// Creates a [BarberCard].
-  const BarberCard({
-    required this.barber,
-    required this.distanceKm,
-    super.key,
-  });
-
-  /// Barber profile.
+  const BarberCard({required this.barber, required this.distanceKm, super.key});
   final BarberModel barber;
-
-  /// Distance from the current user in kilometers.
   final double distanceKm;
-
-  /// Builds a basic star rating row.
-  Widget _buildStars(double rating) {
-    final rounded = rating.isNaN ? 0.0 : rating;
-    final fullStars = rounded.floor().clamp(0, 5);
-    final hasHalf = (rounded - fullStars) >= 0.5;
-    final totalFilled = fullStars + (hasHalf ? 1 : 0);
-
-    return Row(
-      children: List.generate(5, (index) {
-        final isOn = index < totalFilled;
-        return Icon(
-          isOn ? Icons.star : Icons.star_border,
-          size: 16,
-          color: isOn ? Colors.amber : null,
-        );
-      }),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
-    final firstTwoServices = barber.services.take(2).toList();
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: () => context.push('/customer/barber/${barber.uid}'),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F0F0F),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.04)),
+        ),
+        child: Row(
           children: [
-            Text(
-              barber.shopName,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              barber.ownerName,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildStars(barber.rating),
-                const SizedBox(width: 8),
-                Text(
-                  barber.rating.toStringAsFixed(1),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${distanceKm.toStringAsFixed(1)} km away',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 10),
-            if (firstTwoServices.isNotEmpty)
-              ...firstTwoServices.map(
-                (s) => Text(
-                  '${s.name} - \$${s.price.toStringAsFixed(0)}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-            if (firstTwoServices.isEmpty)
-              const Text('No services yet', style: TextStyle(fontSize: 12)),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () =>
-                    context.push('/customer/booking/${barber.uid}'),
-                child: const Text('Book Now'),
+            CircleAvatar(backgroundColor: Colors.white10, radius: 24, child: Text(barber.shopName[0].toUpperCase(), style: const TextStyle(color: Colors.white))),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(barber.shopName.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 1)),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    const Icon(Icons.star_rounded, color: Colors.white24, size: 14),
+                    const SizedBox(width: 4),
+                    Text(barber.rating.toStringAsFixed(1), style: const TextStyle(color: Colors.white24, fontSize: 11)),
+                    const SizedBox(width: 12),
+                    Text('${distanceKm.toStringAsFixed(1)} KM AWAY', style: const TextStyle(color: Colors.white10, fontSize: 10, letterSpacing: 1)),
+                  ]),
+                ],
               ),
             ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white10, size: 14),
           ],
         ),
       ),
     );
   }
 }
-
