@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'core/services/notification_service.dart';
 import 'firebase/firebase_options.dart';
 
 /// Application entrypoint for BarberBook.
@@ -23,6 +24,11 @@ Future<void> main() async {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
+      
+      // Initialize notification service
+      await NotificationService.instance.initialize();
+      // Print token for debugging
+      await NotificationService.instance.getToken();
     }
   } on FirebaseException catch (e) {
     runApp(FirebaseInitFailedApp(summary: e.message ?? 'FirebaseException'));
