@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -283,7 +284,8 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   }
 
   Future<void> _openMapSheet() async {
-    final accent = Theme.of(context).colorScheme.primary;
+    BarberModel? selectedBarber;
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -292,89 +294,141 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        return SizedBox(
-          height: MediaQuery.sizeOf(ctx).height * 0.72,
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.customerBorder,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
-                child: Row(
-                  children: [
-                    Text(
-                      'Near you',
-                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return SizedBox(
+              height: MediaQuery.sizeOf(ctx).height * 0.78,
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.customerBorder,
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
                   ),
-                  child: FlutterMap(
-                    options: MapOptions(
-                      initialCenter: _center,
-                      initialZoom: 13,
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate: CartoMapTiles.urlTemplate(dark: true),
-                        maxNativeZoom: 18,
-                        userAgentPackageName: 'com.barberbook.app',
-                      ),
-                      MarkerLayer(
-                        markers: _barbers
-                            .where(
-                              (b) =>
-                                  b.location.latitude.abs() > 0.01 ||
-                                  b.location.longitude.abs() > 0.01,
-                            )
-                            .map(
-                              (b) => Marker(
-                                point: LatLng(
-                                  b.location.latitude,
-                                  b.location.longitude,
-                                ),
-                                width: 44,
-                                height: 44,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    Navigator.pop(ctx);
-                                    context.push('/customer/barber/${b.uid}');
-                                  },
-                                  child: Icon(
-                                    Icons.location_on_rounded,
-                                    color: accent,
-                                    size: 40,
-                                  ),
-                                ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 12, 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Near you',
+                          style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
                               ),
-                            )
-                            .toList(),
-                      ),
-                    ],
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${_barbers.length} shops',
+                            style: const TextStyle(
+                              color: AppColors.customerSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                      child: Stack(
+                        children: [
+                          FlutterMap(
+                            options: MapOptions(
+                              initialCenter: _center,
+                              initialZoom: 13,
+                              onTap: (_, _) {
+                                if (selectedBarber != null) {
+                                  setSheetState(() => selectedBarber = null);
+                                }
+                              },
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate: CartoMapTiles.urlTemplate(dark: true),
+                                maxNativeZoom: 18,
+                                userAgentPackageName: 'com.barberbook.app',
+                              ),
+                              MarkerLayer(
+                                markers: _barbers
+                                    .where(
+                                      (b) =>
+                                          b.location.latitude.abs() > 0.01 ||
+                                          b.location.longitude.abs() > 0.01,
+                                    )
+                                    .map(
+                                      (b) => Marker(
+                                        point: LatLng(
+                                          b.location.latitude,
+                                          b.location.longitude,
+                                        ),
+                                        width: 140,
+                                        height: 48,
+                                        alignment: Alignment.bottomCenter,
+                                        child: _BarberMapPointer(
+                                          barber: b,
+                                          isSelected: selectedBarber?.uid == b.uid,
+                                          onTap: () {
+                                            if (selectedBarber?.uid == b.uid) {
+                                              Navigator.pop(ctx);
+                                              context.push('/customer/barber/${b.uid}');
+                                            } else {
+                                              setSheetState(() => selectedBarber = b);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            ],
+                          ),
+                          if (selectedBarber != null)
+                            Positioned(
+                              left: 16,
+                              right: 16,
+                              bottom: 16,
+                              child: _BarberMapPreviewCard(
+                                barber: selectedBarber!,
+                                onBook: () {
+                                  Navigator.pop(ctx);
+                                  context.push(
+                                    '/customer/barber/${selectedBarber!.uid}',
+                                  );
+                                },
+                                onClose: () {
+                                  setSheetState(() => selectedBarber = null);
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -813,6 +867,313 @@ class _UpcomingCard extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.w800,
               color: accent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BarberMapPointer extends StatelessWidget {
+  const _BarberMapPointer({
+    required this.barber,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final BarberModel barber;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFF28241D) : const Color(0xFF1E1E1E),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isSelected ? AppColors.gold : AppColors.customerAccent,
+                width: isSelected ? 1.8 : 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+                if (isSelected)
+                  BoxShadow(
+                    color: AppColors.gold.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                  ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.customerAccent,
+                      width: 1,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: barber.photoUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: barber.photoUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, _) =>
+                                Container(color: AppColors.surfaceElevated),
+                            errorWidget: (_, _, _) => Container(
+                              color: AppColors.surfaceElevated,
+                              child: const Icon(
+                                Icons.content_cut_rounded,
+                                size: 12,
+                                color: AppColors.customerAccent,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            color: AppColors.surfaceElevated,
+                            child: const Icon(
+                              Icons.content_cut_rounded,
+                              size: 12,
+                              color: AppColors.customerAccent,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 82),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        barber.shopName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 10,
+                            color: AppColors.gold,
+                          ),
+                          const SizedBox(width: 1),
+                          Text(
+                            barber.rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 9,
+                              height: 1,
+                            ),
+                          ),
+                          if (barber.isPro) ...[
+                            const SizedBox(width: 3),
+                            const Text(
+                              'PRO',
+                              style: TextStyle(
+                                color: AppColors.gold,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 7,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.translate(
+            offset: const Offset(0, -3),
+            child: Icon(
+              Icons.arrow_drop_down_rounded,
+              size: 16,
+              color: isSelected ? AppColors.gold : AppColors.customerAccent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BarberMapPreviewCard extends StatelessWidget {
+  const _BarberMapPreviewCard({
+    required this.barber,
+    required this.onBook,
+    required this.onClose,
+  });
+
+  final BarberModel barber;
+  final VoidCallback onBook;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.customerAccent.withValues(alpha: 0.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.65),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: barber.photoUrl.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: barber.photoUrl,
+                    width: 52,
+                    height: 52,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, _, _) => Container(
+                      width: 52,
+                      height: 52,
+                      color: AppColors.surfaceElevated,
+                      child: const Icon(
+                        Icons.content_cut_rounded,
+                        color: AppColors.customerAccent,
+                      ),
+                    ),
+                  )
+                : Container(
+                    width: 52,
+                    height: 52,
+                    color: AppColors.surfaceElevated,
+                    child: const Icon(
+                      Icons.content_cut_rounded,
+                      color: AppColors.customerAccent,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        barber.shopName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    if (barber.isPro) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'PRO',
+                          style: TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 14,
+                      color: AppColors.gold,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      barber.rating.toStringAsFixed(1),
+                      style: const TextStyle(
+                        color: AppColors.gold,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        barber.address,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.customerSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: onBook,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.customerAccent,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              minimumSize: const Size(60, 36),
+            ),
+            child: const Text(
+              'View',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
             ),
           ),
         ],
