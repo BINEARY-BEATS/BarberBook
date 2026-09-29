@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/branding/barberbook_logo.dart';
 import '../../../core/constants/firestore_keys.dart';
 import '../../../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
@@ -75,6 +76,8 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const BarberBookLogo(size: 48),
+              const SizedBox(height: 18),
               Text(
                 'How will you use BarberBook?',
                 style: theme.textTheme.headlineMedium?.copyWith(

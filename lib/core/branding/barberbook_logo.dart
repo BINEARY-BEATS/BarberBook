@@ -13,11 +13,14 @@ class BarberBookLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      'assets/branding/app_icon.png',
-      width: size,
-      height: size,
-      fit: BoxFit.contain,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.22),
+      child: Image.asset(
+        'assets/branding/app_icon.png',
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+      ),
     );
   }
 }

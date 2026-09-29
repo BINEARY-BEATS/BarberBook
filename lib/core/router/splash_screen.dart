@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../branding/barberbook_logo.dart';
 import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/book_primary_button.dart';
@@ -140,24 +141,17 @@ class _SplashScreenState extends State<SplashScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      width: 88,
-                      height: 88,
                       decoration: BoxDecoration(
-                        color: AppColors.accent,
-                        borderRadius: BorderRadius.circular(28),
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.accent.withValues(alpha: 0.35),
-                            blurRadius: 28,
+                            color: AppColors.accent.withValues(alpha: 0.25),
+                            blurRadius: 32,
                             offset: const Offset(0, 12),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.content_cut_rounded,
-                        color: AppColors.onAccent,
-                        size: 40,
-                      ),
+                      child: const BarberBookLogo(size: 88),
                     ),
                     const SizedBox(height: 28),
                     Text(
