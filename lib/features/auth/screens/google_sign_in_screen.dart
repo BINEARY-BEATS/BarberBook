@@ -78,46 +78,51 @@ class _GoogleSignInScreenState extends ConsumerState<GoogleSignInScreen> {
     final role = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: AppColors.customerCard,
       builder: (ctx) {
         return Theme(
           data: AppTheme.customer(),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Test the app',
-                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Jump in with demo shops, bookings, and queue data. No Google account needed.',
-                  style: TextStyle(
-                    color: AppColors.customerSecondary,
-                    height: 1.4,
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 4, 24, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Test the app',
+                    style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                _DemoRoleTile(
-                  icon: Icons.content_cut_rounded,
-                  title: 'Test as Barber',
-                  subtitle: 'Dashboard, schedule, queue & customers',
-                  onTap: () => Navigator.pop(ctx, FirestoreKeys.roleBarber),
-                ),
-                const SizedBox(height: 12),
-                _DemoRoleTile(
-                  icon: Icons.person_search_rounded,
-                  title: 'Test as Customer',
-                  subtitle: 'Browse shops, bookings & messages',
-                  onTap: () => Navigator.pop(ctx, FirestoreKeys.roleCustomer),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Jump in with demo shops, bookings, and queue data. No Google account needed.',
+                    style: TextStyle(
+                      color: AppColors.customerSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  _DemoRoleTile(
+                    icon: Icons.content_cut_rounded,
+                    title: 'Test as Barber',
+                    subtitle: 'Dashboard, schedule, queue & customers',
+                    onTap: () => Navigator.pop(ctx, FirestoreKeys.roleBarber),
+                  ),
+                  const SizedBox(height: 12),
+                  _DemoRoleTile(
+                    icon: Icons.person_search_rounded,
+                    title: 'Test as Customer',
+                    subtitle: 'Browse shops, bookings & messages',
+                    onTap: () => Navigator.pop(ctx, FirestoreKeys.roleCustomer),
+                  ),
+                ],
+              ),
             ),
           ),
         );

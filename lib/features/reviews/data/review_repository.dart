@@ -6,6 +6,12 @@ import '../models/review_model.dart';
 
 final reviewRepositoryProvider = Provider((ref) => ReviewRepository());
 
+final barberReviewsProvider =
+    StreamProvider.autoDispose.family<List<ReviewModel>, String>((ref, barberId) {
+  if (barberId.isEmpty) return Stream.value(const []);
+  return ref.watch(reviewRepositoryProvider).watchReviews(barberId);
+});
+
 class ReviewRepository {
   ReviewRepository({FirebaseFirestore? firestore})
       : _db = firestore ?? FirebaseFirestore.instance;

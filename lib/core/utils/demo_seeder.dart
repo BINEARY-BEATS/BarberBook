@@ -51,9 +51,9 @@ class DemoSeeder {
     'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1585747860715-2ba37e789b80?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1512690459411-b9245aed614b?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1605497787561-4d2b4d5e3e0e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1493256338651-d82f7acb2b38?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1517832606299-7ae9b720a186?auto=format&fit=crop&w=800&q=80',
   ];
@@ -64,6 +64,8 @@ class DemoSeeder {
     (name: 'Marcus T.', rating: 4.5, comment: 'Great vibe and solid cut. Booking again.'),
     (name: 'Elena R.', rating: 5, comment: 'Hot towel shave was next level. Highly recommend.'),
     (name: 'Jayden K.', rating: 4, comment: 'Friendly staff and consistent results every visit.'),
+    (name: 'David L.', rating: 5, comment: 'Exceptional attention to detail. Always on point.'),
+    (name: 'Samira H.', rating: 5, comment: 'Masterful work with scissors. Clean and luxurious atmosphere.'),
   ];
 
   /// Runs shop seeding with a hard timeout so the UI never blocks forever.
@@ -89,7 +91,7 @@ class DemoSeeder {
           'totalReviews': 128,
           'isPro': true,
           'photoUrl':
-              'https://images.unsplash.com/photo-1585747860715-2ba37e789b80?auto=format&fit=crop&w=1200&q=80',
+              'https://images.unsplash.com/photo-1512690459411-b9245aed614b?auto=format&fit=crop&w=1200&q=80',
         },
         {
           'id': 'demo_shop_noir_cuts',
@@ -132,11 +134,17 @@ class DemoSeeder {
         },
       ];
 
-  /// Shop + queue docs only (parallel) — what home needs to leave the skeleton.
+  /// Shop + queue + initial portfolio and reviews (parallel) so everything is loaded immediately.
   static Future<void> ensureDemoShopsFast() async {
     final fs = FirebaseFirestore.instance;
     await Future.wait([
       for (final shop in _catalogShops) _writeShopAndQueue(fs, shop),
+    ]);
+    await Future.wait([
+      for (var i = 0; i < _catalogShops.length; i++) ...[
+        _seedPortfolio(fs, _catalogShops[i]['id'] as String, i),
+        _seedReviews(fs, _catalogShops[i]['id'] as String, i),
+      ],
     ]);
   }
 
@@ -485,5 +493,10 @@ class DemoSeeder {
         FirestoreKeys.createdAt: FieldValue.serverTimestamp(),
       });
     }
+
+    await Future.wait([
+      _seedPortfolio(fs, barberId, 0),
+      _seedReviews(fs, barberId, 0),
+    ]);
   }
 }

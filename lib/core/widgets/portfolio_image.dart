@@ -33,35 +33,45 @@ class PortfolioImage extends StatelessWidget {
           width: width,
           height: height,
           gaplessPlayback: true,
-          errorBuilder: (_, _, _) => _fallback(),
+          errorBuilder: (_, _, _) => _fallback(context),
         );
       } catch (_) {
-        return _fallback();
+        return _fallback(context);
       }
     }
 
     if (imageUrl.startsWith('http')) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       return CachedNetworkImage(
         imageUrl: imageUrl,
         fit: fit,
         width: width,
         height: height,
-        errorWidget: (_, _, _) => _fallback(),
+        placeholder: (_, _) => Container(
+          width: width,
+          height: height,
+          color: AppColors.card(isDark),
+        ),
+        errorWidget: (_, _, _) => _fallback(context),
       );
     }
 
-    return _fallback();
+    return _fallback(context);
   }
 
-  Widget _fallback() {
-    return ColoredBox(
-      color: AppColors.accentSoft,
-      child: SizedBox(
-        width: width,
-        height: height,
-        child: const Icon(
-          Icons.broken_image_outlined,
-          color: AppColors.accent,
+  Widget _fallback(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: width,
+      height: height,
+      color: AppColors.card(isDark),
+      child: Center(
+        child: Icon(
+          Icons.content_cut_rounded,
+          color: AppColors.secondaryText(isDark),
+          size: (width != null && height != null)
+              ? (width! * 0.28).clamp(16.0, 36.0)
+              : 24,
         ),
       ),
     );

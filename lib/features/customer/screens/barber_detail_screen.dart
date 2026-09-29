@@ -188,11 +188,7 @@ class _BarberDetailBody extends ConsumerWidget {
     final accent = theme.colorScheme.primary;
     final asyncBarber = ref.watch(currentBarberProvider(barberId));
     final portfolioAsync = ref.watch(barberPortfolioProvider(barberId));
-    final reviewsAsync = ref.watch(
-      StreamProvider.autoDispose(
-        (ref) => ref.watch(reviewRepositoryProvider).watchReviews(barberId),
-      ),
-    );
+    final reviewsAsync = ref.watch(barberReviewsProvider(barberId));
     final queueAsync = ref.watch(barberQueueProvider(barberId));
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
