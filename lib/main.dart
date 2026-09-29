@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'app.dart';
 import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
-import 'features/payments/data/purchases_service.dart';
 import 'firebase/firebase_options.dart';
 
 Future<void> main() async {
@@ -43,11 +42,6 @@ Future<void> main() async {
     runApp(FirebaseInitFailedApp(summary: e.toString()));
     return;
   }
-
-  // Best-effort RevenueCat init (no-op if key is placeholder).
-  try {
-    await PurchasesService().configure();
-  } catch (_) {}
 
   runApp(
     const ProviderScope(

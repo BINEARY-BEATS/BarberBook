@@ -1,80 +1,41 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../../../core/constants/firestore_keys.dart';
-import '../../../firebase/revenuecat_config.dart';
 
 final purchasesServiceProvider = Provider((ref) => PurchasesService());
 
-/// RevenueCat wrapper for BarberBook Pro (Android).
+/// Demo Pro service (RevenueCat disabled for demo purpose).
 class PurchasesService {
-  bool _configured = false;
-
-  bool get isConfigured {
-    final key = kRevenueCatAndroidApiKey.trim();
-    return key.isNotEmpty && !key.startsWith('REPLACE_WITH');
-  }
+  bool get isConfigured => false;
 
   Future<void> configure() async {
-    if (!isConfigured || _configured) return;
-    try {
-      await Purchases.setLogLevel(LogLevel.warn);
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      final config = PurchasesConfiguration(kRevenueCatAndroidApiKey);
-      if (uid != null) config.appUserID = uid;
-      await Purchases.configure(config);
-      _configured = true;
-    } catch (e) {
-      if (kDebugMode) print('RevenueCat configure failed: $e');
-    }
+    // No-op: RevenueCat disabled for demo mode.
   }
 
   Future<bool> isPro() async {
-    if (!_configured) await configure();
-    if (!_configured) return false;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return false;
     try {
-      final info = await Purchases.getCustomerInfo();
-      return info.entitlements.active.containsKey(kRevenueCatProEntitlementId);
+      final doc = await FirebaseFirestore.instance
+          .collection(FirestoreKeys.barbers)
+          .doc(uid)
+          .get();
+      return doc.data()?[FirestoreKeys.barberIsPro] == true;
     } catch (_) {
       return false;
     }
   }
 
-  Future<Offerings?> getOfferings() async {
-    if (!_configured) await configure();
-    if (!_configured) return null;
-    try {
-      return await Purchases.getOfferings();
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future<bool> purchasePro() async {
-    if (!_configured) await configure();
-    if (!_configured) throw StateError('RevenueCat is not configured.');
-    final offerings = await Purchases.getOfferings();
-    final packages = offerings.current?.availablePackages ?? [];
-    if (packages.isEmpty) throw StateError('No Pro package available.');
-    final result = await Purchases.purchase(
-      PurchaseParams.package(packages.first),
-    );
-    final active =
-        result.customerInfo.entitlements.active.containsKey(kRevenueCatProEntitlementId);
-    if (active) await syncProToFirestore(true);
-    return active;
+    // Demo mode: simply activate Pro in Firestore directly
+    await syncProToFirestore(true);
+    return true;
   }
 
   Future<void> restore() async {
-    if (!_configured) await configure();
-    if (!_configured) return;
-    final info = await Purchases.restorePurchases();
-    final active =
-        info.entitlements.active.containsKey(kRevenueCatProEntitlementId);
-    await syncProToFirestore(active);
+    // No-op for demo mode
   }
 
   Future<void> syncProToFirestore(bool isPro) async {

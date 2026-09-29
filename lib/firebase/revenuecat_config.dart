@@ -1,11 +1,9 @@
-/// RevenueCat public SDK keys (Android).
-///
-/// Create a project at https://app.revenuecat.com, add an Android app, then
-/// paste the **public** SDK key here. Entitlement id must match the dashboard.
-const String kRevenueCatAndroidApiKey = 'test_nBhhbfdPGjujTUjxpvbSatAUgLt';
+/// RevenueCat configuration (disabled for demo mode).
+const bool kRevenueCatEnabled = false;
+const String kRevenueCatAndroidApiKey = '';
 
 /// Entitlement identifier that unlocks BarberBook Pro.
 const String kRevenueCatProEntitlementId = 'pro';
 
-/// Free-tier portfolio photo limit; Pro removes this cap.
-const int kFreePortfolioLimit = 3;
+/// Free-tier portfolio photo limit (demo mode: relaxed to 100).
+const int kFreePortfolioLimit = 100;

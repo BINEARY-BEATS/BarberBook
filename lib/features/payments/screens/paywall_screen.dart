@@ -17,25 +17,14 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   bool _busy = false;
 
   Future<void> _buy() async {
-    final svc = ref.read(purchasesServiceProvider);
-    if (!svc.isConfigured) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Add your RevenueCat Android API key in revenuecat_config.dart',
-          ),
-        ),
-      );
-      return;
-    }
     setState(() => _busy = true);
     try {
-      await svc.configure();
+      final svc = ref.read(purchasesServiceProvider);
       final ok = await svc.purchasePro();
       if (!mounted) return;
       if (ok) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Welcome to Pro.')),
+          const SnackBar(content: Text('Pro access enabled (Demo mode).')),
         );
         context.pop();
       }
@@ -117,7 +106,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               ),
               const Spacer(),
               BookPrimaryButton(
-                label: 'Upgrade to Pro',
+                label: 'Activate Pro (Demo Mode)',
                 loading: _busy,
                 onPressed: _busy ? null : _buy,
               ),
