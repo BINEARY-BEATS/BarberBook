@@ -18,6 +18,9 @@ migrate_working_dir/
 *.iws
 .idea/
 
+# Cursor / VS Code
+.cursor/
+
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
 # is commented out by default.
@@ -81,3 +84,13 @@ local.properties
 
 # Generated plugin files (can be regenerated)
 GeneratedPluginRegistrant.*
+
+# Kotlin compiler & Gradle build cache
+**/.kotlin/
+*.salive
+
+# Node & Firebase functions
+functions/node_modules/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log
