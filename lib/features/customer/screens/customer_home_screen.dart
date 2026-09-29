@@ -382,8 +382,8 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                           b.location.latitude,
                                           b.location.longitude,
                                         ),
-                                        width: 140,
-                                        height: 48,
+                                        width: 145,
+                                        height: 56,
                                         alignment: Alignment.bottomCenter,
                                         child: _BarberMapPointer(
                                           barber: b,
@@ -891,11 +891,15 @@ class _BarberMapPointer extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
+      child: SizedBox(
+        width: 145,
+        height: 56,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: BoxDecoration(
               color: isSelected ? const Color(0xFF28241D) : const Color(0xFF1E1E1E),
@@ -1021,6 +1025,7 @@ class _BarberMapPointer extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
