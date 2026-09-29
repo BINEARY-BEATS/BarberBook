@@ -60,10 +60,11 @@ class AppointmentModel {
               FirestoreKeys.serviceDurationMinutes: 0,
             },
       ),
-      slot: map[FirestoreKeys.appointmentSlot] as Timestamp,
+      slot: map[FirestoreKeys.appointmentSlot] as Timestamp? ??
+          Timestamp.now(),
       status: map[FirestoreKeys.appointmentStatus] as String? ??
           FirestoreKeys.appointmentStatusPending,
-      createdAt: map[FirestoreKeys.createdAt] as Timestamp,
+      createdAt: map[FirestoreKeys.createdAt] as Timestamp? ?? Timestamp.now(),
     );
   }
 

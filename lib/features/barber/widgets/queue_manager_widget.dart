@@ -1,99 +1,231 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/firestore_keys.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/book_primary_button.dart';
+import '../../../core/widgets/book_status_chip.dart';
+import '../../queue/data/queue_repository.dart';
 import '../providers/barber_provider.dart';
 
 class QueueManagerWidget extends ConsumerWidget {
   const QueueManagerWidget({super.key});
 
+  Future<void> _addWalkIn(BuildContext context, WidgetRef ref, String uid) async {
+    final controller = TextEditingController();
+    final name = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'New walk-in',
+                style: Theme.of(ctx).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'Customer name'),
+              ),
+              const SizedBox(height: 24),
+              BookPrimaryButton(
+                label: 'Add to queue',
+                onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (name == null || name.isEmpty) return;
+    await ref.read(queueRepositoryProvider).addWalkIn(barberId: uid, name: name);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final user = FirebaseAuth.instance.currentUser;
-    final asyncQueue = ref.watch(barberQueueProvider(user?.uid ?? ''));
+    final uid = user?.uid ?? '';
+    final asyncQueue = ref.watch(barberQueueProvider(uid));
 
     return asyncQueue.when(
       data: (queue) {
-        if (queue == null) return const Center(child: Text('Service offline.', style: TextStyle(color: Colors.white24)));
-
-        final entries = List<Map<String, dynamic>>.from(queue[FirestoreKeys.queueEntries] ?? []);
-        final currentServing = queue[FirestoreKeys.queueCurrentServing] as int? ?? 10;
-        final avgWait = queue[FirestoreKeys.queueAvgWaitMins] as int? ?? 15;
+        final entries = List<Map<String, dynamic>>.from(
+          queue?[FirestoreKeys.queueEntries] ?? [],
+        );
+        final currentServing =
+            queue?[FirestoreKeys.queueCurrentServing] as int? ?? 0;
+        final avgWait = queue?[FirestoreKeys.queueAvgWaitMins] as int? ?? 15;
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F0F0F),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.04)),
+                color: AppColors.card(isDark),
+                borderRadius: BorderRadius.circular(AppRadius.r16),
+                boxShadow: isDark ? null : AppColors.cardShadow,
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _StatusItem(label: 'CURRENTLY SERVING', value: '#$currentServing'),
-                  Container(width: 1, height: 40, color: Colors.white.withOpacity(0.05)),
-                  _StatusItem(label: 'AVERAGE WAIT', value: '${avgWait}M'),
+                  Expanded(
+                    child: _Stat(
+                      label: 'Serving',
+                      value: currentServing == 0 ? '—' : '#$currentServing',
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 36,
+                    color: AppColors.divider(isDark),
+                  ),
+                  Expanded(
+                    child: _Stat(
+                      label: 'Waiting',
+                      value: '${entries.length}',
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 36,
+                    color: AppColors.divider(isDark),
+                  ),
+                  Expanded(
+                    child: _Stat(
+                      label: 'Avg wait',
+                      value: entries.isEmpty ? '—' : '${avgWait}m',
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
             if (entries.isEmpty)
-              const Center(child: Text('No customers in waitlist.', style: TextStyle(color: Colors.white12, fontStyle: FontStyle.italic)))
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'No one in the waitlist.',
+                  style: TextStyle(color: AppColors.secondaryText(isDark)),
+                ),
+              )
             else
-              ...entries.take(3).map((entry) {
-                final name = entry[FirestoreKeys.queueEntryName] ?? 'Guest';
+              ...entries.take(5).toList().asMap().entries.map((e) {
+                final name =
+                    e.value[FirestoreKeys.queueEntryName] as String? ?? 'Guest';
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF050505),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.02)),
+                    color: AppColors.card(isDark),
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
+                    boxShadow: isDark ? null : AppColors.cardShadow,
                   ),
                   child: Row(
                     children: [
-                      Text(name.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, letterSpacing: 1)),
-                      const Spacer(),
-                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white10, size: 14),
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: AppColors.accentSoft,
+                        child: Text(
+                          '${e.key + 1}',
+                          style: const TextStyle(
+                            color: AppColors.accent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: AppColors.onSurface(isDark),
+                          ),
+                        ),
+                      ),
+                      const BookStatusChip(
+                        label: 'Waiting',
+                        tone: BookStatusTone.pending,
+                      ),
                     ],
                   ),
                 );
               }),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: FilledButton(
-                onPressed: () {},
-                style: FilledButton.styleFrom(backgroundColor: cs.secondary, foregroundColor: Colors.black),
-                child: const Text('SERVE NEXT CUSTOMER'),
-              ),
+            const SizedBox(height: 12),
+            BookPrimaryButton(
+              label: 'Serve next customer',
+              icon: Icons.check_circle_outline,
+              onPressed: entries.isEmpty
+                  ? null
+                  : () => ref.read(queueRepositoryProvider).serveNext(uid),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => _addWalkIn(context, ref, uid),
+              icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+              label: const Text('Add walk-in'),
             ),
           ],
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, __) => Center(child: Text('Error: $e')),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppColors.accent),
+      ),
+      error: (e, _) =>
+          Text('Queue error: $e', style: theme.textTheme.bodyMedium),
     );
   }
 }
 
-class _StatusItem extends StatelessWidget {
-  const _StatusItem({required this.label, required this.value});
-  final String label; final String value;
+class _Stat extends StatelessWidget {
+  const _Stat({required this.label, required this.value});
+  final String label;
+  final String value;
+
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white24, letterSpacing: 1.5)),
-      const SizedBox(height: 4),
-      Text(value, style: GoogleFonts.lexend(fontSize: 24, fontWeight: FontWeight.w200, color: Colors.white)),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.secondaryText(isDark),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      ],
+    );
+  }
 }
