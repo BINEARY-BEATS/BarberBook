@@ -14,6 +14,20 @@ class FirestoreKeys {
   static const String queue = 'queue';
   static const String portfolio = 'portfolio';
   static const String reviews = 'reviews';
+  static const String conversations = 'conversations';
+  static const String messages = 'messages';
+
+  // Conversations/{id}
+  static const String conversationParticipantIds = 'participantIds';
+  static const String conversationBarberId = 'barberId';
+  static const String conversationCustomerId = 'customerId';
+  static const String conversationLastMessage = 'lastMessage';
+  static const String conversationUpdatedAt = 'updatedAt';
+
+  // messages/{id}
+  static const String messageSenderId = 'senderId';
+  static const String messageText = 'text';
+  static const String messageCreatedAt = 'createdAt';
 
   // ----------------------------
   // Common Fields
@@ -42,8 +56,12 @@ class FirestoreKeys {
   // ----------------------------
   static const String userName = 'name';
   static const String userPhone = 'phone';
+  static const String userEmail = 'email';
   static const String userPhotoUrl = 'photoUrl';
   static const String userRole = 'role';
+  static const String userCity = 'city';
+  static const String profileComplete = 'profileComplete';
+  static const String fcmToken = 'fcmToken';
 
   // ----------------------------
   // Barbers/{uid}
@@ -51,6 +69,7 @@ class FirestoreKeys {
   static const String barberShopName = 'shopName';
   static const String barberOwnerName = 'ownerName';
   static const String barberPhone = 'phone';
+  static const String barberEmail = 'email';
   static const String barberPhotoUrl = 'photoUrl';
   static const String barberLocation = 'location';
   static const String barberAddress = 'address';
@@ -60,6 +79,8 @@ class FirestoreKeys {
   static const String barberIsActive = 'isActive';
   static const String barberWorkingHours = 'workingHours';
   static const String barberServices = 'services';
+  static const String barberFeatured = 'featured';
+  // profileComplete shared key above also used on barbers
 
   // ----------------------------
   // workingHours map: { mon-sun : { open, close } }

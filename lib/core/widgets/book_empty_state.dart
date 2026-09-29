@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+
 class BookEmptyState extends StatelessWidget {
   const BookEmptyState({
     required this.icon,
@@ -17,7 +19,7 @@ class BookEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Center(
       child: Padding(
@@ -25,15 +27,29 @@ class BookEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: Colors.white.withOpacity(0.05)),
-            const SizedBox(height: 32),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 32,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 24),
             Text(
-              title.toUpperCase(),
+              title,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleLarge?.copyWith(
-                letterSpacing: 2,
-                fontWeight: FontWeight.w300,
-                color: Colors.white24,
+                fontWeight: FontWeight.w600,
+                color: AppColors.onSurface(isDark),
               ),
             ),
             if (subtitle != null) ...[
@@ -42,13 +58,13 @@ class BookEmptyState extends StatelessWidget {
                 subtitle!,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white10,
+                  color: AppColors.secondaryText(isDark),
                   height: 1.5,
                 ),
               ),
             ],
             if (action != null) ...[
-              const SizedBox(height: 48),
+              const SizedBox(height: 32),
               action!,
             ],
           ],
